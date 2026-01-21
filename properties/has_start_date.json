@@ -1,0 +1,7 @@
+{
+  "id": "has_start_date",
+  "label": "Start Date",
+  "description": "The date when something begins.",
+  "datatype": "Date",
+  "cardinality": "single"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "has_end_date",
+  "label": "End Date",
+  "description": "The date when something concludes.",
+  "datatype": "Date",
+  "cardinality": "single"
+}

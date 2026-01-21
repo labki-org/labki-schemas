@@ -1,0 +1,8 @@
+{
+  "id": "Organization",
+  "label": "Organization",
+  "description": "A social entity such as a company, institution, or association.",
+  "parent": null,
+  "properties": ["has_name", "has_founded_date", "has_website"],
+  "subobjects": ["Address"]
+}

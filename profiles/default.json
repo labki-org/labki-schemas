@@ -1,0 +1,6 @@
+{
+  "id": "default",
+  "label": "Default Profile",
+  "description": "Standard profile including core entities.",
+  "modules": ["core"]
+}

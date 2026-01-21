@@ -1,0 +1,7 @@
+{
+  "id": "has_website",
+  "label": "Website",
+  "description": "A URL to an official website.",
+  "datatype": "URL",
+  "cardinality": "single"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "has_email",
+  "label": "Email",
+  "description": "An email address for contact.",
+  "datatype": "Email",
+  "cardinality": "multiple"
+}
