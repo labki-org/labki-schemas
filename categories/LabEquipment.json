@@ -1,0 +1,8 @@
+{
+  "id": "LabEquipment",
+  "label": "Lab Equipment",
+  "description": "A category for laboratory equipment",
+  "parent": null,
+  "properties": [],
+  "subobjects": []
+}
