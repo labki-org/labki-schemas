@@ -1,0 +1,16 @@
+{
+  "name": "labki-schemas",
+  "version": "1.0.0",
+  "description": "Labki ontology schema definitions with CI validation",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "validate": "node scripts/validate.js"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "better-ajv-errors": "^1.2.0",
+    "fast-glob": "^3.3.3",
+    "json-parse-even-better-errors": "^4.0.0"
+  }
+}
