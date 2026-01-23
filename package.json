@@ -10,6 +10,7 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "better-ajv-errors": "^1.2.0",
+    "dependency-graph": "^1.0.0",
     "fast-glob": "^3.3.3",
     "json-parse-even-better-errors": "^4.0.0"
   }
