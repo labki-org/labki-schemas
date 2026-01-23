@@ -1,10 +1,10 @@
 # Labki Schemas
 
-A community-developed ontology for structuring data across MediaWiki installations using the [SemanticSchemas](https://github.com/labki/SemanticSchemas) extension with [Semantic MediaWiki](https://www.semantic-mediawiki.org/).
+A community-developed ontology for structuring data across MediaWiki installations using the SemanticSchemas extension with [Semantic MediaWiki](https://www.semantic-mediawiki.org/).
 
 ## Overview
 
-This repository contains schema definitions that can be installed on MediaWiki wikis to provide standardized entity types, properties, and data structures. The ontology is modular, allowing wikis to install only the components they need.
+This repository contains schema definitions for standardized entity types, properties, and data structures. The ontology is modular, allowing wikis to install only the components they need.
 
 ## Structure
 
@@ -18,25 +18,6 @@ labki-schemas/
 ├── templates/      # Display templates for rendering property values
 ├── SCHEMA.md       # Complete specification document
 └── VERSION         # Current schema version
-```
-
-## Quick Start
-
-### Installing a Bundle
-
-Bundles are pre-configured collections of modules. To install the default bundle on your wiki:
-
-```php
-// In LocalSettings.php
-$wgSemanticSchemasBundle = 'Default';
-```
-
-### Installing Individual Modules
-
-For more control, install specific modules:
-
-```php
-$wgSemanticSchemasModules = ['Core'];
 ```
 
 ## Entity Types
@@ -94,9 +75,3 @@ Contributions are welcome! When adding new entities:
 ## License
 
 [TBD]
-
-## Links
-
-- [SemanticSchemas Extension](https://github.com/labki/SemanticSchemas)
-- [Semantic MediaWiki](https://www.semantic-mediawiki.org/)
-- [Schema Specification](SCHEMA.md)
