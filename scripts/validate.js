@@ -5,6 +5,7 @@ import betterAjvErrors from 'better-ajv-errors'
 import fg from 'fast-glob'
 import fs from 'node:fs'
 import path from 'node:path'
+import semver from 'semver'
 
 // Reference validation modules
 import { buildEntityIndex } from './lib/entity-index.js'
@@ -12,6 +13,10 @@ import { validateReferences } from './lib/reference-validator.js'
 import { validateConstraints } from './lib/constraint-validator.js'
 import { findOrphanedEntities } from './lib/orphan-detector.js'
 import { detectCycles } from './lib/cycle-detector.js'
+
+// Version validation modules
+import { validateVersionFormat, compareVersions, getBaseVersion } from './lib/version-validator.js'
+import { detectChanges } from './lib/change-detector.js'
 
 // Initialize Ajv with draft 2020-12 support
 // CRITICAL: Must use ajv/dist/2020.js (not default export)
@@ -263,9 +268,10 @@ function formatConsoleOutput(allErrors, allWarnings, totalFiles) {
  * @param {Array} allErrors - All validation errors
  * @param {Array} allWarnings - All validation warnings
  * @param {number} totalFiles - Total files validated
+ * @param {object} versionAnalysis - Version analysis results (optional)
  * @returns {string} Markdown content
  */
-function generateMarkdownSummary(allErrors, allWarnings, totalFiles) {
+function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnalysis = null) {
   const hasErrors = allErrors.length > 0
   const hasWarnings = allWarnings.length > 0
 
@@ -326,6 +332,12 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles) {
           markdown += `**Suggestion:** Add the referenced entity's module as a dependency.\n\n`
         } else if (error.type.startsWith('circular-')) {
           markdown += `**Suggestion:** Break the cycle by removing one of the references in the chain.\n\n`
+        } else if (error.type === 'missing-version') {
+          markdown += `**Suggestion:** Create a VERSION file in the repository root with valid semver (e.g., "1.0.0").\n\n`
+        } else if (error.type === 'invalid-version') {
+          markdown += `**Suggestion:** Update VERSION file to contain valid semver format: MAJOR.MINOR.PATCH (e.g., "1.0.0").\n\n`
+        } else if (error.type === 'version-not-incremented') {
+          markdown += `**Suggestion:** Increment the VERSION to be greater than the base branch version.\n\n`
         }
       }
     }
@@ -352,6 +364,26 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles) {
     markdown += '\n'
   }
 
+  // Version analysis section (if version was checked)
+  if (versionAnalysis && versionAnalysis.prVersion) {
+    markdown += '### Version Analysis\n\n'
+    markdown += '| Field | Value |\n'
+    markdown += '|-------|-------|\n'
+    markdown += `| PR Version | ${versionAnalysis.prVersion} |\n`
+    markdown += `| Base Version | ${versionAnalysis.baseVersion} |\n`
+    markdown += `| Required Bump | ${versionAnalysis.requiredBump} |\n`
+    markdown += `| Actual Bump | ${versionAnalysis.actualBump} |\n`
+    markdown += '\n'
+
+    if (versionAnalysis.breakingChanges.length > 0) {
+      markdown += '**Breaking Changes Detected:**\n'
+      for (const reason of versionAnalysis.breakingChanges) {
+        markdown += `- ${reason}\n`
+      }
+      markdown += '\n'
+    }
+  }
+
   return markdown
 }
 
@@ -360,16 +392,112 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles) {
  * @param {Array} allErrors - All validation errors
  * @param {Array} allWarnings - All validation warnings
  * @param {number} totalFiles - Total files validated
+ * @param {object} versionAnalysis - Version analysis results (optional)
  */
-function writeJobSummary(allErrors, allWarnings, totalFiles) {
+function writeJobSummary(allErrors, allWarnings, totalFiles, versionAnalysis = null) {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY
 
   if (!summaryFile) {
     return  // Not running in GitHub Actions
   }
 
-  const markdown = generateMarkdownSummary(allErrors, allWarnings, totalFiles)
+  const markdown = generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnalysis)
   fs.appendFileSync(summaryFile, markdown, 'utf8')
+}
+
+/**
+ * Validate VERSION file format, increment, and required bump
+ * @param {object} entityIndex - Entity index for change detection
+ * @returns {{errors: Array, warnings: Array, analysis: object}}
+ */
+function validateVersion(entityIndex) {
+  const errors = []
+  const warnings = []
+  const analysis = {
+    prVersion: null,
+    baseVersion: null,
+    actualBump: null,
+    requiredBump: null,
+    isValid: false,
+    isIncremented: false,
+    breakingChanges: []
+  }
+
+  // 1. Read VERSION file
+  let versionContent
+  try {
+    versionContent = fs.readFileSync('VERSION', 'utf8')
+  } catch (err) {
+    errors.push({
+      file: 'VERSION',
+      type: 'missing-version',
+      message: 'VERSION file not found in repository root'
+    })
+    return { errors, warnings, analysis }
+  }
+
+  // 2. Validate format
+  const formatResult = validateVersionFormat(versionContent)
+  if (!formatResult.valid) {
+    errors.push({
+      file: 'VERSION',
+      type: 'invalid-version',
+      message: formatResult.error
+    })
+    return { errors, warnings, analysis }
+  }
+
+  analysis.prVersion = versionContent.trim()
+  analysis.isValid = true
+
+  // 3. Get base version
+  const baseVersion = getBaseVersion()
+  analysis.baseVersion = baseVersion || '0.0.0'
+
+  // 4. Compare versions (if base exists)
+  if (baseVersion) {
+    const compareResult = compareVersions(analysis.prVersion, baseVersion)
+    if (!compareResult.valid) {
+      errors.push({
+        file: 'VERSION',
+        type: 'version-not-incremented',
+        message: compareResult.error
+      })
+      return { errors, warnings, analysis }
+    }
+    analysis.isIncremented = true
+  } else {
+    // New VERSION file, treat as incremented from 0.0.0
+    analysis.isIncremented = true
+  }
+
+  // 5. Detect changes and required bump
+  const { changes, requiredBump } = detectChanges(entityIndex)
+  analysis.requiredBump = requiredBump
+
+  // 6. Determine actual bump type
+  analysis.actualBump = semver.diff(analysis.baseVersion, analysis.prVersion) || 'patch'
+
+  // 7. Collect breaking changes for reporting
+  analysis.breakingChanges = changes
+    .filter(c => c.reason !== null)
+    .map(c => c.reason)
+
+  // 8. Compare actual vs required bump
+  const bumpPriority = { major: 3, minor: 2, patch: 1, null: 0 }
+  const actualPriority = bumpPriority[analysis.actualBump] || 0
+  const requiredPriority = bumpPriority[analysis.requiredBump] || 0
+
+  if (requiredPriority > actualPriority) {
+    // Actual bump is insufficient for detected changes
+    warnings.push({
+      file: 'VERSION',
+      type: 'version-bump-insufficient',
+      message: `Version bump is ${analysis.actualBump}, but changes require ${analysis.requiredBump}. Breaking changes: ${analysis.breakingChanges.join(', ') || 'none detected'}`
+    })
+  }
+
+  return { errors, warnings, analysis }
 }
 
 /**
@@ -410,15 +538,27 @@ async function main() {
     // Phase 3: Cycle detection
     const { errors: cycleErrors } = detectCycles(entityIndex)
 
+    // Phase 4: Version validation
+    const { errors: versionErrors, warnings: versionWarnings, analysis: versionAnalysis } = validateVersion(entityIndex)
+
     // Combine all errors and warnings
-    const allErrors = [...schemaErrors, ...referenceErrors, ...constraintErrors, ...cycleErrors]
-    const allWarnings = [...referenceWarnings, ...orphanWarnings]
+    const allErrors = [...schemaErrors, ...referenceErrors, ...constraintErrors, ...cycleErrors, ...versionErrors]
+    const allWarnings = [...referenceWarnings, ...orphanWarnings, ...versionWarnings]
 
     // Format and output results
     formatConsoleOutput(allErrors, allWarnings, files.length)
 
+    // Output version analysis
+    if (versionAnalysis.prVersion) {
+      console.log(`\nVersion: ${versionAnalysis.prVersion} (base: ${versionAnalysis.baseVersion})`)
+      console.log(`Required bump: ${versionAnalysis.requiredBump}, Actual bump: ${versionAnalysis.actualBump}`)
+      if (versionAnalysis.breakingChanges.length > 0) {
+        console.log(`Breaking changes detected: ${versionAnalysis.breakingChanges.length}`)
+      }
+    }
+
     // Write GitHub Actions Job Summary if available
-    writeJobSummary(allErrors, allWarnings, files.length)
+    writeJobSummary(allErrors, allWarnings, files.length, versionAnalysis)
 
     // Exit with appropriate code (errors fail, warnings don't)
     const hasErrors = allErrors.length > 0
