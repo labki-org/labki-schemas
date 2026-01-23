@@ -11,6 +11,7 @@ import { buildEntityIndex } from './lib/entity-index.js'
 import { validateReferences } from './lib/reference-validator.js'
 import { validateConstraints } from './lib/constraint-validator.js'
 import { findOrphanedEntities } from './lib/orphan-detector.js'
+import { detectCycles } from './lib/cycle-detector.js'
 
 // Initialize Ajv with draft 2020-12 support
 // CRITICAL: Must use ajv/dist/2020.js (not default export)
@@ -323,6 +324,8 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles) {
           markdown += `**Suggestion:** Remove the item from either required or optional list (not both).\n\n`
         } else if (error.type === 'scope-violation') {
           markdown += `**Suggestion:** Add the referenced entity's module as a dependency.\n\n`
+        } else if (error.type.startsWith('circular-')) {
+          markdown += `**Suggestion:** Break the cycle by removing one of the references in the chain.\n\n`
         }
       }
     }
@@ -404,8 +407,11 @@ async function main() {
     // Run orphan detection (warnings only)
     const { warnings: orphanWarnings } = findOrphanedEntities(entityIndex)
 
+    // Phase 3: Cycle detection
+    const { errors: cycleErrors } = detectCycles(entityIndex)
+
     // Combine all errors and warnings
-    const allErrors = [...schemaErrors, ...referenceErrors, ...constraintErrors]
+    const allErrors = [...schemaErrors, ...referenceErrors, ...constraintErrors, ...cycleErrors]
     const allWarnings = [...referenceWarnings, ...orphanWarnings]
 
     // Format and output results
