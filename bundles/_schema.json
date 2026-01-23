@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://labki.org/schemas/bundle.schema.json",
+  "title": "Bundle",
+  "description": "A curated collection of Modules designed for a specific use case or deployment scenario",
+  "type": "object",
+  "required": ["id", "label", "description", "modules"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier matching the filename (without .json)",
+      "pattern": "^[A-Z][a-z]*(_[a-z]+)*$"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable display name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Explanation of what this Bundle is designed for",
+      "minLength": 1
+    },
+    "modules": {
+      "type": "array",
+      "description": "List of Module IDs to include",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][a-z]*(_[a-z]+)*$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}

@@ -1,7 +1,0 @@
-{
-  "id": "has_name",
-  "label": "Name",
-  "description": "The name or title of an entity.",
-  "datatype": "Text",
-  "cardinality": "single"
-}

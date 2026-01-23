@@ -1,7 +1,0 @@
-{
-  "id": "core",
-  "label": "Core Module",
-  "description": "Essential categories used across all profiles.",
-  "categories": ["Agent", "Person", "Organization"],
-  "dependencies": []
-}

@@ -1,7 +1,0 @@
-{
-  "id": "has_founded_date",
-  "label": "Founded Date",
-  "description": "The date when an organization was established.",
-  "datatype": "Date",
-  "cardinality": "single"
-}

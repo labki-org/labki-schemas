@@ -1,8 +1,0 @@
-{
-  "id": "Researcher",
-  "label": "Researcher",
-  "description": "A person who conducts scientific or academic research.",
-  "parent": "Person",
-  "properties": ["has_orcid", "has_affiliation"],
-  "subobjects": []
-}

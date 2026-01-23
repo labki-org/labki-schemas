@@ -1,8 +1,0 @@
-{
-  "id": "has_status",
-  "label": "Status",
-  "description": "The current state or condition.",
-  "datatype": "Text",
-  "cardinality": "single",
-  "allowed_values": ["planned", "active", "completed", "cancelled"]
-}

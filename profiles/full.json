@@ -1,6 +1,0 @@
-{
-  "id": "full",
-  "label": "Full Profile",
-  "description": "Complete profile with all available modules.",
-  "modules": ["core", "projects"]
-}

@@ -1,7 +1,0 @@
-{
-  "id": "has_birthdate",
-  "label": "Birthdate",
-  "description": "The date of birth.",
-  "datatype": "Date",
-  "cardinality": "single"
-}

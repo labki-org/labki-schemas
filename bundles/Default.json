@@ -1,0 +1,6 @@
+{
+  "id": "Default",
+  "label": "Default Bundle",
+  "description": "Standard bundle with core entities",
+  "modules": ["Core"]
+}

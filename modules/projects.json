@@ -1,7 +1,0 @@
-{
-  "id": "projects",
-  "label": "Projects Module",
-  "description": "Categories for project management.",
-  "categories": ["Project", "Organization"],
-  "dependencies": ["core"]
-}

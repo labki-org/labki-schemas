@@ -1,0 +1,7 @@
+{
+  "id": "Has_street",
+  "label": "Street",
+  "description": "Street address including number",
+  "datatype": "Text",
+  "cardinality": "single"
+}

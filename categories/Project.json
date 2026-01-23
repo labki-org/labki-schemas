@@ -1,8 +1,0 @@
-{
-  "id": "Project",
-  "label": "Project",
-  "description": "A planned undertaking with defined objectives and timeline.",
-  "parent": null,
-  "properties": ["has_name", "has_start_date", "has_end_date", "has_status"],
-  "subobjects": []
-}
