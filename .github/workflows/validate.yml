@@ -6,6 +6,10 @@ name: Validate Entity Schemas
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   validate:
     name: JSON Schema Validation
@@ -30,5 +34,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate all entity files
-        run: npm run validate
+      - name: Validate entities
+        id: validate
+        continue-on-error: true
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm run validate -- --changed-only --output-markdown
+          else
+            npm run validate -- --output-markdown
+          fi
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: schema-validation
+          path: validation-results.md
+
+      - name: Fail if validation failed
+        if: steps.validate.outcome == 'failure'
+        run: exit 1
