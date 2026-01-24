@@ -91,6 +91,26 @@ jobs:
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
           echo "bundles=$BUNDLES" >> $GITHUB_OUTPUT
 
+      - name: Apply version bumps
+        id: versions
+        if: steps.changes.outputs.skip != 'true'
+        run: |
+          set -e
+
+          # Calculate and apply versions
+          RESULT=$(node scripts/ci-apply-versions.js)
+
+          # Parse result for downstream steps
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$RESULT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Log warnings if any
+          WARNINGS=$(echo "$RESULT" | jq -r '.overrideWarnings | .[]?')
+          if [ -n "$WARNINGS" ]; then
+            echo "::warning::Override warnings: $WARNINGS"
+          fi
+
       - name: Generate artifacts
         if: steps.changes.outputs.skip != 'true'
         run: |
@@ -109,7 +129,7 @@ jobs:
             npm run generate-artifacts -- --bundles="$BUNDLES"
           fi
 
-      - name: Commit generated artifacts
+      - name: Commit version updates and artifacts
         if: steps.changes.outputs.skip != 'true'
         id: commit
         run: |
@@ -118,8 +138,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-          # Stage version artifacts only (artifact-generator writes to versions/ subdirs)
-          git add modules/*/versions/*.json bundles/*/versions/*.json VERSION 2>/dev/null || true
+          # Stage source JSON version updates AND version artifacts
+          git add modules/*.json bundles/*.json VERSION 2>/dev/null || true
+          git add modules/*/versions/*.json bundles/*/versions/*.json 2>/dev/null || true
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
@@ -140,7 +161,7 @@ jobs:
             SUMMARY="bundles: $BUNDLES"
           fi
 
-          git commit -m "release(artifacts): $SUMMARY"
+          git commit -m "release: $SUMMARY" -m "Version bumps applied automatically by CI"
           git push
 
           echo "committed=true" >> $GITHUB_OUTPUT
@@ -177,6 +198,16 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Bundles" >> $GITHUB_STEP_SUMMARY
             echo "${{ steps.affected.outputs.bundles }}" | tr ',' '\n' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+
+            # Add version change details if available
+            if [ -n "${{ steps.versions.outputs.result }}" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Version Changes" >> $GITHUB_STEP_SUMMARY
+              echo "${{ steps.versions.outputs.result }}" | jq -r '
+                (.modules | to_entries[] | "- Module \(.key): \(.value.from) → \(.value.to) (\(.value.bump))"),
+                (.bundles | to_entries[] | "- Bundle \(.key): \(.value.from) → \(.value.to) (\(.value.bump))")
+              ' >> $GITHUB_STEP_SUMMARY
+            fi
           else
             echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
             echo "No new artifacts needed." >> $GITHUB_STEP_SUMMARY
