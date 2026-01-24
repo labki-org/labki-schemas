@@ -17,6 +17,7 @@ import { detectCycles } from './lib/cycle-detector.js'
 // Version validation modules
 import { validateVersionFormat, compareVersions, getBaseVersion } from './lib/version-validator.js'
 import { detectChanges, getChangedFiles } from './lib/change-detector.js'
+import { calculateVersionCascade } from './lib/version-cascade.js'
 
 // Initialize Ajv with draft 2020-12 support
 // CRITICAL: Must use ajv/dist/2020.js (not default export)
@@ -63,7 +64,8 @@ async function discoverFiles() {
         'package*.json',
         '.planning/**',
         '.claude/**',
-        '.**/**'  // Exclude all dot directories
+        '.**/**',  // Exclude all dot directories
+        'VERSION_OVERRIDES.schema.json'
       ],
       absolute: false,
       onlyFiles: true
@@ -344,7 +346,50 @@ function generatePRComment(schemaErrors, refErrors, cycleErrors, allWarnings, to
         md += `- ${reason}\n`
       }
     }
-    md += '\n</details>\n'
+    md += '\n</details>\n\n'
+  }
+
+  // Version Cascade section
+  if (versionAnalysis && versionAnalysis.cascade) {
+    const cascade = versionAnalysis.cascade
+    md += '<details>\n'
+    md += '<summary>Version Cascade</summary>\n\n'
+
+    // Module bumps table
+    const moduleBumps = Object.entries(cascade.moduleBumps)
+    if (moduleBumps.length > 0) {
+      md += '**Module Version Bumps:**\n'
+      md += '| Module | Bump Type |\n'
+      md += '|--------|----------|\n'
+      for (const [mod, bump] of moduleBumps) {
+        md += `| ${mod} | ${bump} |\n`
+      }
+      md += '\n'
+    }
+
+    // Bundle bumps table
+    const bundleBumps = Object.entries(cascade.bundleBumps)
+    if (bundleBumps.length > 0) {
+      md += '**Bundle Version Bumps:**\n'
+      md += '| Bundle | Bump Type |\n'
+      md += '|--------|----------|\n'
+      for (const [bundle, bump] of bundleBumps) {
+        md += `| ${bundle} | ${bump} |\n`
+      }
+      md += '\n'
+    }
+
+    md += `**Ontology Required Bump:** ${cascade.ontologyBump}\n`
+
+    // Override warnings
+    if (cascade.overrideWarnings.length > 0) {
+      md += '\n**Override Warnings:**\n'
+      for (const warning of cascade.overrideWarnings) {
+        md += `- ${warning}\n`
+      }
+    }
+
+    md += '\n</details>\n\n'
   }
 
   return md
@@ -471,6 +516,47 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
     }
   }
 
+  // Version Cascade section
+  if (versionAnalysis && versionAnalysis.cascade) {
+    const cascade = versionAnalysis.cascade
+    markdown += '### Version Cascade\n\n'
+
+    // Module bumps table
+    const moduleBumps = Object.entries(cascade.moduleBumps)
+    if (moduleBumps.length > 0) {
+      markdown += '**Module Version Bumps:**\n'
+      markdown += '| Module | Bump Type |\n'
+      markdown += '|--------|----------|\n'
+      for (const [mod, bump] of moduleBumps) {
+        markdown += `| ${mod} | ${bump} |\n`
+      }
+      markdown += '\n'
+    }
+
+    // Bundle bumps table
+    const bundleBumps = Object.entries(cascade.bundleBumps)
+    if (bundleBumps.length > 0) {
+      markdown += '**Bundle Version Bumps:**\n'
+      markdown += '| Bundle | Bump Type |\n'
+      markdown += '|--------|----------|\n'
+      for (const [bundle, bump] of bundleBumps) {
+        markdown += `| ${bundle} | ${bump} |\n`
+      }
+      markdown += '\n'
+    }
+
+    markdown += `**Ontology Required Bump:** ${cascade.ontologyBump}\n\n`
+
+    // Override warnings
+    if (cascade.overrideWarnings.length > 0) {
+      markdown += '**Override Warnings:**\n'
+      for (const warning of cascade.overrideWarnings) {
+        markdown += `- ${warning}\n`
+      }
+      markdown += '\n'
+    }
+  }
+
   return markdown
 }
 
@@ -584,6 +670,42 @@ function validateVersion(entityIndex) {
     })
   }
 
+  // 9. Calculate version cascade
+  const baseBranch = process.env.GITHUB_BASE_REF
+    ? `origin/${process.env.GITHUB_BASE_REF}`
+    : 'origin/main'
+
+  const cascadeResult = calculateVersionCascade(entityIndex, baseBranch, {
+    applyOverrides: true,
+    rootDir: process.cwd()
+  })
+
+  // Add cascade info to analysis (handle null/empty result)
+  if (cascadeResult && cascadeResult.moduleBumps) {
+    analysis.cascade = {
+      moduleBumps: Object.fromEntries(cascadeResult.moduleBumps),
+      bundleBumps: Object.fromEntries(cascadeResult.bundleBumps),
+      ontologyBump: cascadeResult.ontologyBump,
+      overrideWarnings: cascadeResult.overrideWarnings || []
+    }
+  } else {
+    analysis.cascade = {
+      moduleBumps: {},
+      bundleBumps: {},
+      ontologyBump: null,
+      overrideWarnings: []
+    }
+  }
+
+  // Add override warnings to warnings array
+  for (const warning of (cascadeResult.overrideWarnings || [])) {
+    warnings.push({
+      file: 'VERSION_OVERRIDES.json',
+      type: 'override-downgrade',
+      message: warning
+    })
+  }
+
   return { errors, warnings, analysis }
 }
 
@@ -671,6 +793,17 @@ async function main() {
       console.log(`Required bump: ${versionAnalysis.requiredBump}, Actual bump: ${versionAnalysis.actualBump}`)
       if (versionAnalysis.breakingChanges.length > 0) {
         console.log(`Breaking changes detected: ${versionAnalysis.breakingChanges.length}`)
+      }
+    }
+
+    // Output cascade analysis
+    if (versionAnalysis.cascade) {
+      const { moduleBumps, bundleBumps, ontologyBump } = versionAnalysis.cascade
+      const modCount = Object.keys(moduleBumps).length
+      const bundleCount = Object.keys(bundleBumps).length
+      if (modCount > 0 || bundleCount > 0) {
+        console.log(`Cascade: ${modCount} module(s), ${bundleCount} bundle(s) affected`)
+        console.log(`Ontology bump required: ${ontologyBump}`)
       }
     }
 
