@@ -1,12 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-// Re-export buildEntityIndex for convenience
-export { buildEntityIndex } from './entity-index.js'
-
-/**
- * Entity types that can be included in module artifacts
- */
-const ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates']
+import { MODULE_ENTITY_TYPES } from './constants.js'
 
 /**
  * Generate a module version artifact
@@ -43,7 +37,7 @@ export function generateModuleArtifact(moduleId, version, entityIndex) {
   }
 
   // Add entities by type (full JSON content)
-  for (const entityType of ENTITY_TYPES) {
+  for (const entityType of MODULE_ENTITY_TYPES) {
     const entityIds = moduleEntity[entityType] || []
     const entities = []
 

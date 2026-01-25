@@ -7,30 +7,14 @@ import { buildEntityIndex } from './lib/entity-index.js'
 import { calculateVersionCascade } from './lib/version-cascade.js'
 
 /**
- * Update module version in JSON file
+ * Update entity version in JSON file
  *
- * @param {string} moduleId - Module identifier
+ * @param {string} entityType - Entity type ('modules' or 'bundles')
+ * @param {string} entityId - Entity identifier
  * @param {string} newVersion - New semver version
  */
-function updateModuleVersion(moduleId, newVersion) {
-  const filePath = path.join('modules', `${moduleId}.json`)
-  const content = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-
-  // Update version field
-  content.version = newVersion
-
-  // Write back with 2-space indent + trailing newline
-  fs.writeFileSync(filePath, JSON.stringify(content, null, 2) + '\n')
-}
-
-/**
- * Update bundle version in JSON file
- *
- * @param {string} bundleId - Bundle identifier
- * @param {string} newVersion - New semver version
- */
-function updateBundleVersion(bundleId, newVersion) {
-  const filePath = path.join('bundles', `${bundleId}.json`)
+function updateEntityVersion(entityType, entityId, newVersion) {
+  const filePath = path.join(entityType, `${entityId}.json`)
   const content = JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
   // Update version field
@@ -98,7 +82,7 @@ async function main() {
 
     // Update module versions
     for (const [moduleId, versionInfo] of result.moduleVersions) {
-      updateModuleVersion(moduleId, versionInfo.new)
+      updateEntityVersion('modules', moduleId, versionInfo.new)
       modulesOutput[moduleId] = {
         from: versionInfo.current,
         to: versionInfo.new,
@@ -108,7 +92,7 @@ async function main() {
 
     // Update bundle versions
     for (const [bundleId, versionInfo] of result.bundleVersions) {
-      updateBundleVersion(bundleId, versionInfo.new)
+      updateEntityVersion('bundles', bundleId, versionInfo.new)
       bundlesOutput[bundleId] = {
         from: versionInfo.current,
         to: versionInfo.new,

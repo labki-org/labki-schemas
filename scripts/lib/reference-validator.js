@@ -1,4 +1,4 @@
-import { DepGraph } from 'dependency-graph'
+import { buildModuleDependencyGraph, buildReverseModuleIndex } from './version-cascade.js'
 
 /**
  * Declarative map of entity types to their reference fields and target types
@@ -31,59 +31,6 @@ export const REFERENCE_FIELDS = {
   bundles: {
     modules: 'modules'
   }
-}
-
-/**
- * Build module dependency graph for scope resolution
- *
- * @param {Object} entityIndex - Entity index from buildEntityIndex
- * @returns {DepGraph} Dependency graph with modules as nodes
- */
-function buildModuleDependencyGraph(entityIndex) {
-  const graph = new DepGraph()
-
-  // Add all modules as nodes first
-  for (const [moduleId] of entityIndex.modules) {
-    graph.addNode(moduleId)
-  }
-
-  // Add dependency edges
-  for (const [moduleId, moduleEntity] of entityIndex.modules) {
-    const deps = moduleEntity.dependencies || []
-    for (const depId of deps) {
-      // Only add edge if dependency module exists (missing refs handled separately)
-      if (entityIndex.modules.has(depId)) {
-        graph.addDependency(moduleId, depId)
-      }
-    }
-  }
-
-  return graph
-}
-
-/**
- * Build reverse index: entity key -> module id
- *
- * @param {Object} entityIndex - Entity index from buildEntityIndex
- * @returns {Map<string, string>} Map from "type:id" to module id
- */
-function buildReverseModuleIndex(entityIndex) {
-  const reverseIndex = new Map()
-
-  for (const [moduleId, moduleEntity] of entityIndex.modules) {
-    // Index each entity type that modules reference
-    const entityTypes = ['categories', 'properties', 'subobjects', 'templates']
-
-    for (const entityType of entityTypes) {
-      const entityIds = moduleEntity[entityType] || []
-      for (const entityId of entityIds) {
-        const key = `${entityType}:${entityId}`
-        reverseIndex.set(key, moduleId)
-      }
-    }
-  }
-
-  return reverseIndex
 }
 
 /**

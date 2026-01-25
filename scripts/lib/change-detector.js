@@ -2,18 +2,12 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { detailedDiff } from 'deep-object-diff'
+import { ENTITY_TYPES } from './constants.js'
 
 /**
- * Entity directories that are tracked for change detection
+ * Entity directories as a Set for efficient lookup
  */
-const ENTITY_DIRECTORIES = new Set([
-  'categories',
-  'properties',
-  'subobjects',
-  'templates',
-  'modules',
-  'bundles'
-])
+const ENTITY_DIRECTORIES = new Set(ENTITY_TYPES)
 
 /**
  * Get list of changed files between base branch and HEAD

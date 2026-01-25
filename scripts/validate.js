@@ -6,6 +6,7 @@ import fg from 'fast-glob'
 import fs from 'node:fs'
 import path from 'node:path'
 import semver from 'semver'
+import { GLOB_IGNORE_PATTERNS, BUMP_PRIORITY } from './lib/constants.js'
 
 // Reference validation modules
 import { buildEntityIndex } from './lib/entity-index.js'
@@ -58,16 +59,7 @@ async function discoverFiles() {
   const files = await fg(
     ['**/*.json'],
     {
-      ignore: [
-        '**/_schema.json',
-        '**/node_modules/**',
-        '**/versions/**',  // Exclude generated version artifacts
-        'package*.json',
-        '.planning/**',
-        '.claude/**',
-        '.**/**',  // Exclude all dot directories
-        'VERSION_OVERRIDES.schema.json'
-      ],
+      ignore: GLOB_IGNORE_PATTERNS,
       absolute: false,
       onlyFiles: true
     }
@@ -658,9 +650,8 @@ function validateVersion(entityIndex) {
     .map(c => c.reason)
 
   // 8. Compare actual vs required bump
-  const bumpPriority = { major: 3, minor: 2, patch: 1, null: 0 }
-  const actualPriority = bumpPriority[analysis.actualBump] || 0
-  const requiredPriority = bumpPriority[analysis.requiredBump] || 0
+  const actualPriority = BUMP_PRIORITY[analysis.actualBump] || 0
+  const requiredPriority = BUMP_PRIORITY[analysis.requiredBump] || 0
 
   if (requiredPriority > actualPriority) {
     // Actual bump is insufficient for detected changes

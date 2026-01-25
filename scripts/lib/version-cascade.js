@@ -3,16 +3,8 @@ import semver from 'semver'
 import fs from 'node:fs'
 import path from 'node:path'
 import { detectChanges } from './change-detector.js'
-
-/**
- * Bump priority levels for comparison
- */
-const BUMP_PRIORITY = { major: 3, minor: 2, patch: 1 }
-
-/**
- * Entity types tracked for versioning
- */
-const ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates']
+import { MODULE_ENTITY_TYPES, BUMP_PRIORITY } from './constants.js'
+import { parseEntityPath } from './path-utils.js'
 
 /**
  * Build reverse index: entity key -> module id
@@ -31,7 +23,7 @@ export function buildReverseModuleIndex(entityIndex) {
 
   for (const [moduleId, moduleEntity] of entityIndex.modules) {
     // Index each entity type that modules reference
-    for (const entityType of ENTITY_TYPES) {
+    for (const entityType of MODULE_ENTITY_TYPES) {
       const entityIds = moduleEntity[entityType] || []
       for (const entityId of entityIds) {
         const key = `${entityType}:${entityId}`
@@ -90,10 +82,7 @@ export function calculateModuleBumps(entityIndex, changes) {
 
   for (const change of changes) {
     // Extract entity type and id from file path
-    const parts = change.file.split('/')
-    const entityType = parts[0]
-    const fileName = parts[parts.length - 1]
-    const entityId = fileName.replace('.json', '')
+    const { entityType, entityId } = parseEntityPath(change.file)
 
     // Find containing module
     const key = `${entityType}:${entityId}`
@@ -244,14 +233,12 @@ export function calculateBundleBumps(entityIndex, moduleBumps) {
  * Takes the maximum of all entity changes (including orphans).
  *
  * @param {Array} changes - All entity changes from detectChanges
- * @param {Map<string, string>} moduleBumps - Module bumps (unused, for API consistency)
- * @param {Map<string, string>} bundleBumps - Bundle bumps (unused, for API consistency)
  * @returns {string} Overall bump type ('major', 'minor', or 'patch')
  *
  * @example
- * calculateOntologyBump(changes, moduleBumps, bundleBumps) // 'major'
+ * calculateOntologyBump(changes) // 'major'
  */
-export function calculateOntologyBump(changes, moduleBumps, bundleBumps) {
+export function calculateOntologyBump(changes) {
   if (!changes || changes.length === 0) {
     return 'patch'
   }
@@ -393,14 +380,11 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
   const bundleBumps = calculateBundleBumps(entityIndex, moduleBumps)
 
   // Calculate ontology bump
-  const ontologyBump = calculateOntologyBump(changes, moduleBumps, bundleBumps)
+  const ontologyBump = calculateOntologyBump(changes)
 
   // Identify orphan changes (entities not in any module)
   const orphanChanges = changes.filter(change => {
-    const parts = change.file.split('/')
-    const entityType = parts[0]
-    const fileName = parts[parts.length - 1]
-    const entityId = fileName.replace('.json', '')
+    const { entityType, entityId } = parseEntityPath(change.file)
     const key = `${entityType}:${entityId}`
     return !reverseIndex.has(key)
   })

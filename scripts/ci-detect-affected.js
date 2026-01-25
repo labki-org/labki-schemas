@@ -2,6 +2,7 @@
 
 import { buildEntityIndex } from './lib/entity-index.js'
 import { buildReverseModuleIndex } from './lib/version-cascade.js'
+import { parseEntityPath } from './lib/path-utils.js'
 import fs from 'node:fs'
 
 /**
@@ -28,10 +29,7 @@ async function main() {
   const affectedBundles = new Set()
 
   for (const filePath of changedFiles) {
-    const parts = filePath.split('/')
-    const entityType = parts[0]
-    const fileName = parts[parts.length - 1]
-    const entityId = fileName.replace('.json', '')
+    const { entityType, entityId } = parseEntityPath(filePath)
 
     // Direct module/bundle changes
     if (entityType === 'modules') {

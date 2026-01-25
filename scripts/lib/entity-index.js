@@ -1,18 +1,12 @@
 import fg from 'fast-glob'
 import fs from 'node:fs'
 import path from 'node:path'
+import { ENTITY_TYPES, GLOB_IGNORE_PATTERNS } from './constants.js'
 
 /**
- * Known entity types that are indexed
+ * Known entity types as a Set for efficient lookup
  */
-const ENTITY_TYPES = new Set([
-  'categories',
-  'properties',
-  'subobjects',
-  'templates',
-  'modules',
-  'bundles'
-])
+const ENTITY_TYPES_SET = new Set(ENTITY_TYPES)
 
 /**
  * Build an index of all entities in the project
@@ -46,15 +40,7 @@ export async function buildEntityIndex(rootDir = process.cwd()) {
   const files = await fg(
     ['**/*.json'],
     {
-      ignore: [
-        '**/_schema.json',
-        '**/node_modules/**',
-        '**/versions/**',  // Exclude generated version artifacts
-        'package*.json',
-        '.planning/**',
-        '.claude/**',
-        '.**/**'
-      ],
+      ignore: GLOB_IGNORE_PATTERNS,
       cwd: rootDir,
       absolute: false,
       onlyFiles: true
@@ -67,7 +53,7 @@ export async function buildEntityIndex(rootDir = process.cwd()) {
     const firstSegment = relativePath.split('/')[0]
 
     // Skip files not in known entity type directories
-    if (!ENTITY_TYPES.has(firstSegment)) {
+    if (!ENTITY_TYPES_SET.has(firstSegment)) {
       continue
     }
 
