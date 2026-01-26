@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "label": "Core Module",
   "description": "Essential entities for any wiki - agents, people, and organizations",
-  "categories": ["Agent", "Person", "Organization"],
+  "categories": [
+    "Agent",
+    "Organization",
+    "Person",
+    "Lab_member"
+  ],
   "properties": [
     "Has_name",
     "Has_description",
@@ -14,5 +19,7 @@
     "Has_country",
     "Has_postal_code"
   ],
-  "subobjects": ["Address"]
+  "subobjects": [
+    "Address"
+  ]
 }

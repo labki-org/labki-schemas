@@ -1,0 +1,12 @@
+{
+  "id": "Lab_member",
+  "label": "Lab Member",
+  "description": "A person in a lab.",
+  "parents": [
+    "Person"
+  ],
+  "required_properties": [],
+  "optional_properties": [],
+  "required_subobjects": [],
+  "optional_subobjects": []
+}

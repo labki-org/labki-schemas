@@ -2,6 +2,13 @@
   "id": "Address",
   "label": "Address",
   "description": "A physical or mailing address",
-  "required_properties": ["Has_street", "Has_city", "Has_country"],
-  "optional_properties": ["Has_postal_code"]
+  "required_properties": [
+    "Has_city",
+    "Has_country",
+    "Has_street",
+    "Has_name"
+  ],
+  "optional_properties": [
+    "Has_postal_code"
+  ]
 }
