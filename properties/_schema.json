@@ -78,11 +78,6 @@
       "type": "boolean",
       "description": "If true, each value can only be assigned once across all pages"
     },
-    "parent_property": {
-      "type": "string",
-      "description": "ID of a parent Property for hierarchy",
-      "pattern": "^(Has|Is)_[a-z]+(_[a-z]+)*$"
-    },
     "has_display_template": {
       "type": "string",
       "description": "Reference to a Template for custom rendering",
