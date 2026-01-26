@@ -1,82 +1,56 @@
 import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
 import { execFileSync } from 'node:child_process'
+import { createTempDir } from '../../__fixtures__/temp-dir.js'
+import { ENTITY_TYPES } from '../../lib/constants.js'
 
 /**
  * Create a temporary fixture directory with entity structure
+ *
+ * Extends createTempDir with additional schema and entity management features.
  *
  * @param {string} name - Fixture name (for temp directory prefix)
  * @returns {Object} Fixture manager
  */
 export function createTempFixture(name = 'test-fixture') {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`))
+  const tempDir = createTempDir(`${name}-`)
 
   const fixture = {
     /**
      * Root path of the fixture
      */
-    path: tempDir,
+    path: tempDir.path,
 
     /**
      * Write a file to the fixture
-     *
-     * @param {string} relativePath - Path relative to fixture root
-     * @param {string|Buffer} content - File content
      */
-    writeFile(relativePath, content) {
-      const absolutePath = path.join(tempDir, relativePath)
-      fs.mkdirSync(path.dirname(absolutePath), { recursive: true })
-      fs.writeFileSync(absolutePath, content)
-    },
+    writeFile: tempDir.writeFile.bind(tempDir),
 
     /**
      * Write a JSON file to the fixture
-     *
-     * @param {string} relativePath - Path relative to fixture root
-     * @param {object} data - Data to JSON stringify
      */
-    writeJSON(relativePath, data) {
-      this.writeFile(relativePath, JSON.stringify(data, null, 2) + '\n')
-    },
+    writeJSON: tempDir.writeJSON.bind(tempDir),
 
     /**
      * Read a file from the fixture
-     *
-     * @param {string} relativePath - Path relative to fixture root
-     * @returns {string} File content
      */
-    readFile(relativePath) {
-      return fs.readFileSync(path.join(tempDir, relativePath), 'utf8')
-    },
+    readFile: tempDir.readFile.bind(tempDir),
 
     /**
      * Read and parse a JSON file
-     *
-     * @param {string} relativePath - Path relative to fixture root
-     * @returns {object} Parsed JSON data
      */
-    readJSON(relativePath) {
-      return JSON.parse(this.readFile(relativePath))
-    },
+    readJSON: tempDir.readJSON.bind(tempDir),
 
     /**
      * Check if a file exists
-     *
-     * @param {string} relativePath - Path relative to fixture root
-     * @returns {boolean}
      */
-    exists(relativePath) {
-      return fs.existsSync(path.join(tempDir, relativePath))
-    },
+    exists: tempDir.exists.bind(tempDir),
 
     /**
      * Create standard entity directory structure
      */
     createEntityDirectories() {
-      const dirs = ['categories', 'properties', 'subobjects', 'templates', 'modules', 'bundles']
-      for (const dir of dirs) {
-        fs.mkdirSync(path.join(tempDir, dir), { recursive: true })
+      for (const dir of ENTITY_TYPES) {
+        tempDir.mkdir(dir)
       }
     },
 
@@ -173,9 +147,7 @@ export function createTempFixture(name = 'test-fixture') {
     /**
      * Clean up the fixture (delete directory)
      */
-    cleanup() {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-    }
+    cleanup: tempDir.cleanup.bind(tempDir)
   }
 
   return fixture

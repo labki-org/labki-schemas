@@ -176,6 +176,22 @@ function validateFile(filePath) {
 }
 
 /**
+ * Group items by their file property
+ * @param {Array} items - Array of items with file property
+ * @returns {Object} Items grouped by file path
+ */
+function groupByFile(items) {
+  const grouped = {}
+  for (const item of items) {
+    if (!grouped[item.file]) {
+      grouped[item.file] = []
+    }
+    grouped[item.file].push(item)
+  }
+  return grouped
+}
+
+/**
  * Format errors and warnings for console output
  * @param {Array} allErrors - All validation errors
  * @param {Array} allWarnings - All validation warnings
@@ -190,16 +206,8 @@ function formatConsoleOutput(allErrors, allWarnings, totalFiles) {
     const uniqueErrorFiles = new Set(allErrors.map(e => e.file)).size
     console.error(`\n\u274C Found ${allErrors.length} error(s) in ${uniqueErrorFiles} file(s) (out of ${totalFiles} total)\n`)
 
-    // Group errors by file
-    const errorsByFile = {}
-    for (const error of allErrors) {
-      if (!errorsByFile[error.file]) {
-        errorsByFile[error.file] = []
-      }
-      errorsByFile[error.file].push(error)
-    }
+    const errorsByFile = groupByFile(allErrors)
 
-    // Print each file's errors
     for (const [file, fileErrors] of Object.entries(errorsByFile)) {
       console.error(`\n\uD83D\uDCC4 ${file}`)
 
@@ -228,14 +236,7 @@ function formatConsoleOutput(allErrors, allWarnings, totalFiles) {
         console.log(`::warning file=${warning.file},title=${warning.type}::${warning.message}`)
       }
     } else {
-      // Group warnings by file for local console
-      const warningsByFile = {}
-      for (const warning of allWarnings) {
-        if (!warningsByFile[warning.file]) {
-          warningsByFile[warning.file] = []
-        }
-        warningsByFile[warning.file].push(warning)
-      }
+      const warningsByFile = groupByFile(allWarnings)
 
       for (const [file, fileWarnings] of Object.entries(warningsByFile)) {
         console.warn(`   ${file}`)
@@ -256,6 +257,50 @@ function formatConsoleOutput(allErrors, allWarnings, totalFiles) {
       console.log(`\u2705 All ${totalFiles} file(s) validated successfully`)
     }
   }
+}
+
+/**
+ * Generate a markdown table for bump types
+ * @param {string} title - Table title (e.g., "Module Version Bumps")
+ * @param {string} entityLabel - Column header (e.g., "Module" or "Bundle")
+ * @param {Object} bumps - Object mapping entity ID to bump type
+ * @returns {string} Markdown table or empty string if no bumps
+ */
+function generateBumpTable(title, entityLabel, bumps) {
+  const entries = Object.entries(bumps)
+  if (entries.length === 0) {
+    return ''
+  }
+
+  let md = `**${title}:**\n`
+  md += `| ${entityLabel} | Bump Type |\n`
+  md += '|--------|----------|\n'
+  for (const [id, bump] of entries) {
+    md += `| ${id} | ${bump} |\n`
+  }
+  md += '\n'
+  return md
+}
+
+/**
+ * Generate version cascade section markdown
+ * @param {object} cascade - Cascade analysis from versionAnalysis.cascade
+ * @returns {string} Markdown for cascade section (without wrapper)
+ */
+function generateCascadeMarkdown(cascade) {
+  let md = ''
+  md += generateBumpTable('Module Version Bumps', 'Module', cascade.moduleBumps)
+  md += generateBumpTable('Bundle Version Bumps', 'Bundle', cascade.bundleBumps)
+  md += `**Ontology Required Bump:** ${cascade.ontologyBump}\n`
+
+  if (cascade.overrideWarnings.length > 0) {
+    md += '\n**Override Warnings:**\n'
+    for (const warning of cascade.overrideWarnings) {
+      md += `- ${warning}\n`
+    }
+  }
+
+  return md
 }
 
 /**
@@ -344,48 +389,44 @@ function generatePRComment(schemaErrors, refErrors, cycleErrors, allWarnings, to
 
   // Version Cascade section
   if (versionAnalysis && versionAnalysis.cascade) {
-    const cascade = versionAnalysis.cascade
     md += '<details>\n'
     md += '<summary>Version Cascade</summary>\n\n'
-
-    // Module bumps table
-    const moduleBumps = Object.entries(cascade.moduleBumps)
-    if (moduleBumps.length > 0) {
-      md += '**Module Version Bumps:**\n'
-      md += '| Module | Bump Type |\n'
-      md += '|--------|----------|\n'
-      for (const [mod, bump] of moduleBumps) {
-        md += `| ${mod} | ${bump} |\n`
-      }
-      md += '\n'
-    }
-
-    // Bundle bumps table
-    const bundleBumps = Object.entries(cascade.bundleBumps)
-    if (bundleBumps.length > 0) {
-      md += '**Bundle Version Bumps:**\n'
-      md += '| Bundle | Bump Type |\n'
-      md += '|--------|----------|\n'
-      for (const [bundle, bump] of bundleBumps) {
-        md += `| ${bundle} | ${bump} |\n`
-      }
-      md += '\n'
-    }
-
-    md += `**Ontology Required Bump:** ${cascade.ontologyBump}\n`
-
-    // Override warnings
-    if (cascade.overrideWarnings.length > 0) {
-      md += '\n**Override Warnings:**\n'
-      for (const warning of cascade.overrideWarnings) {
-        md += `- ${warning}\n`
-      }
-    }
-
+    md += generateCascadeMarkdown(versionAnalysis.cascade)
     md += '\n</details>\n\n'
   }
 
   return md
+}
+
+/**
+ * Get suggestion text for an error type
+ * @param {string} errorType - The error type
+ * @returns {string|null} Suggestion text or null if no suggestion
+ */
+function getErrorSuggestion(errorType) {
+  const suggestions = {
+    'id-mismatch': 'Rename the file to match the id, or update the id field to match the filename.',
+    'no-schema': 'Create a _schema.json file in the same directory as this entity.',
+    'parse': 'Check for syntax errors (trailing commas, missing quotes, invalid escape sequences).',
+    'missing-reference': 'Create the referenced entity or fix the reference.',
+    'property-conflict': 'Remove the item from either required or optional list (not both).',
+    'subobject-conflict': 'Remove the item from either required or optional list (not both).',
+    'scope-violation': "Add the referenced entity's module as a dependency.",
+    'missing-version': 'Create a VERSION file in the repository root with valid semver (e.g., "1.0.0").',
+    'invalid-version': 'Update VERSION file to contain valid semver format: MAJOR.MINOR.PATCH (e.g., "1.0.0").',
+    'version-not-incremented': 'Increment the VERSION to be greater than the base branch version.'
+  }
+
+  if (suggestions[errorType]) {
+    return suggestions[errorType]
+  }
+
+  // Handle circular-* error types
+  if (errorType.startsWith('circular-')) {
+    return 'Break the cycle by removing one of the references in the chain.'
+  }
+
+  return null
 }
 
 /**
@@ -420,16 +461,8 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
   if (hasErrors) {
     markdown += '### Errors\n\n'
 
-    // Group errors by file
-    const errorsByFile = {}
-    for (const error of allErrors) {
-      if (!errorsByFile[error.file]) {
-        errorsByFile[error.file] = []
-      }
-      errorsByFile[error.file].push(error)
-    }
+    const errorsByFile = groupByFile(allErrors)
 
-    // Document each file's errors
     for (const [file, fileErrors] of Object.entries(errorsByFile)) {
       markdown += `#### \`${file}\`\n\n`
 
@@ -442,27 +475,9 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
           markdown += `**Error:** ${error.message}\n\n`
         }
 
-        // Add suggestions for common issues
-        if (error.type === 'id-mismatch') {
-          markdown += `**Suggestion:** Rename the file to match the id, or update the id field to match the filename.\n\n`
-        } else if (error.type === 'no-schema') {
-          markdown += `**Suggestion:** Create a _schema.json file in the same directory as this entity.\n\n`
-        } else if (error.type === 'parse') {
-          markdown += `**Suggestion:** Check for syntax errors (trailing commas, missing quotes, invalid escape sequences).\n\n`
-        } else if (error.type === 'missing-reference') {
-          markdown += `**Suggestion:** Create the referenced entity or fix the reference.\n\n`
-        } else if (error.type === 'property-conflict' || error.type === 'subobject-conflict') {
-          markdown += `**Suggestion:** Remove the item from either required or optional list (not both).\n\n`
-        } else if (error.type === 'scope-violation') {
-          markdown += `**Suggestion:** Add the referenced entity's module as a dependency.\n\n`
-        } else if (error.type.startsWith('circular-')) {
-          markdown += `**Suggestion:** Break the cycle by removing one of the references in the chain.\n\n`
-        } else if (error.type === 'missing-version') {
-          markdown += `**Suggestion:** Create a VERSION file in the repository root with valid semver (e.g., "1.0.0").\n\n`
-        } else if (error.type === 'invalid-version') {
-          markdown += `**Suggestion:** Update VERSION file to contain valid semver format: MAJOR.MINOR.PATCH (e.g., "1.0.0").\n\n`
-        } else if (error.type === 'version-not-incremented') {
-          markdown += `**Suggestion:** Increment the VERSION to be greater than the base branch version.\n\n`
+        const suggestion = getErrorSuggestion(error.type)
+        if (suggestion) {
+          markdown += `**Suggestion:** ${suggestion}\n\n`
         }
       }
     }
@@ -472,13 +487,7 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
   if (hasWarnings) {
     markdown += '### Warnings\n\n'
 
-    const warningsByFile = {}
-    for (const warning of allWarnings) {
-      if (!warningsByFile[warning.file]) {
-        warningsByFile[warning.file] = []
-      }
-      warningsByFile[warning.file].push(warning)
-    }
+    const warningsByFile = groupByFile(allWarnings)
 
     for (const [file, fileWarnings] of Object.entries(warningsByFile)) {
       markdown += `- \`${file}\`\n`
@@ -511,43 +520,9 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
 
   // Version Cascade section
   if (versionAnalysis && versionAnalysis.cascade) {
-    const cascade = versionAnalysis.cascade
     markdown += '### Version Cascade\n\n'
-
-    // Module bumps table
-    const moduleBumps = Object.entries(cascade.moduleBumps)
-    if (moduleBumps.length > 0) {
-      markdown += '**Module Version Bumps:**\n'
-      markdown += '| Module | Bump Type |\n'
-      markdown += '|--------|----------|\n'
-      for (const [mod, bump] of moduleBumps) {
-        markdown += `| ${mod} | ${bump} |\n`
-      }
-      markdown += '\n'
-    }
-
-    // Bundle bumps table
-    const bundleBumps = Object.entries(cascade.bundleBumps)
-    if (bundleBumps.length > 0) {
-      markdown += '**Bundle Version Bumps:**\n'
-      markdown += '| Bundle | Bump Type |\n'
-      markdown += '|--------|----------|\n'
-      for (const [bundle, bump] of bundleBumps) {
-        markdown += `| ${bundle} | ${bump} |\n`
-      }
-      markdown += '\n'
-    }
-
-    markdown += `**Ontology Required Bump:** ${cascade.ontologyBump}\n\n`
-
-    // Override warnings
-    if (cascade.overrideWarnings.length > 0) {
-      markdown += '**Override Warnings:**\n'
-      for (const warning of cascade.overrideWarnings) {
-        markdown += `- ${warning}\n`
-      }
-      markdown += '\n'
-    }
+    markdown += generateCascadeMarkdown(versionAnalysis.cascade)
+    markdown += '\n'
   }
 
   return markdown

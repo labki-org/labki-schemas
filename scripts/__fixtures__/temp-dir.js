@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { ENTITY_TYPES } from '../lib/constants.js'
 
 /**
  * Create a managed temporary directory for testing
@@ -141,9 +142,7 @@ export function createTempDir(prefix = 'test-') {
 export function createEntityTempDir(entities = {}) {
   const tempDir = createTempDir('entity-')
 
-  const entityTypes = ['categories', 'properties', 'subobjects', 'templates', 'modules', 'bundles']
-
-  for (const type of entityTypes) {
+  for (const type of ENTITY_TYPES) {
     const typeEntities = entities[type] || []
     for (const entity of typeEntities) {
       tempDir.writeJSON(`${type}/${entity.id}.json`, entity)

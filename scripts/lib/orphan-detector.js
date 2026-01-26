@@ -5,6 +5,8 @@
  * Orphaned entities are warnings, not errors - they don't block CI.
  */
 
+import { MODULE_ENTITY_TYPES } from './constants.js'
+
 /**
  * Find entities that are not referenced by any module
  *
@@ -21,25 +23,15 @@ export function findOrphanedEntities(entityIndex) {
   const referencedEntities = new Set()
 
   for (const [moduleId, mod] of entityIndex.modules) {
-    for (const cat of (mod.categories || [])) {
-      referencedEntities.add(`categories:${cat}`)
-    }
-    for (const prop of (mod.properties || [])) {
-      referencedEntities.add(`properties:${prop}`)
-    }
-    for (const sub of (mod.subobjects || [])) {
-      referencedEntities.add(`subobjects:${sub}`)
-    }
-    for (const tmpl of (mod.templates || [])) {
-      referencedEntities.add(`templates:${tmpl}`)
+    for (const entityType of MODULE_ENTITY_TYPES) {
+      for (const entityId of (mod[entityType] || [])) {
+        referencedEntities.add(`${entityType}:${entityId}`)
+      }
     }
   }
 
-  // Entity types to check for orphans (NOT modules or bundles)
-  const entityTypesToCheck = ['categories', 'properties', 'subobjects', 'templates']
-
-  // Check each entity type
-  for (const entityType of entityTypesToCheck) {
+  // Check each entity type (same as MODULE_ENTITY_TYPES)
+  for (const entityType of MODULE_ENTITY_TYPES) {
     const entities = entityIndex[entityType]
 
     for (const [entityId, entity] of entities) {

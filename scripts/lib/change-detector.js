@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { detailedDiff } from 'deep-object-diff'
-import { ENTITY_TYPES } from './constants.js'
+import { ENTITY_TYPES, BUMP_PRIORITY } from './constants.js'
 
 /**
  * Entity directories as a Set for efficient lookup
@@ -326,6 +326,7 @@ export function detectChanges(entityIndex, baseBranch = 'origin/main') {
   const changedFiles = getChangedFiles(baseBranch)
   const changes = []
   let requiredBump = 'patch'
+  let requiredPriority = BUMP_PRIORITY.patch
 
   for (const filePath of changedFiles) {
     const entityType = filePath.split('/')[0]
@@ -341,11 +342,11 @@ export function detectChanges(entityIndex, baseBranch = 'origin/main') {
       reason: result.reason
     })
 
-    // Update required bump (major > minor > patch)
-    if (result.changeType === 'major') {
-      requiredBump = 'major'
-    } else if (result.changeType === 'minor' && requiredBump !== 'major') {
-      requiredBump = 'minor'
+    // Update required bump using priority comparison
+    const changePriority = BUMP_PRIORITY[result.changeType] || 0
+    if (changePriority > requiredPriority) {
+      requiredBump = result.changeType
+      requiredPriority = changePriority
     }
   }
 

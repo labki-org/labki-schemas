@@ -326,6 +326,31 @@ export function calculateNewVersion(currentVersion, bumpType) {
 }
 
 /**
+ * Calculate new versions for entities based on bump types
+ *
+ * @param {Map<string, string>} bumps - Map from entityId to bumpType
+ * @param {Map<string, object>} entityMap - Map from entityId to entity object
+ * @returns {Map<string, {current: string, new: string, bump: string}>} Version info per entity
+ */
+function calculateEntityVersions(bumps, entityMap) {
+  const versions = new Map()
+
+  for (const [entityId, bump] of bumps) {
+    const entity = entityMap.get(entityId)
+    if (entity && entity.version) {
+      const newVersion = calculateNewVersion(entity.version, bump)
+      versions.set(entityId, {
+        current: entity.version,
+        new: newVersion,
+        bump
+      })
+    }
+  }
+
+  return versions
+}
+
+/**
  * Calculate complete version cascade from entity changes
  *
  * Main entry point that orchestrates the entire cascade calculation:
@@ -408,15 +433,13 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
   if (options.applyOverrides) {
     overrides = loadOverrides(options.rootDir)
 
-    // Apply overrides to modules
-    const moduleOverrideResult = applyOverrides(moduleBumps, overrides)
-    finalModuleBumps = moduleOverrideResult.bumps
-    overrideWarnings.push(...moduleOverrideResult.warnings)
+    // Apply overrides to modules and bundles
+    const moduleResult = applyOverrides(moduleBumps, overrides)
+    const bundleResult = applyOverrides(bundleBumps, overrides)
 
-    // Apply overrides to bundles
-    const bundleOverrideResult = applyOverrides(bundleBumps, overrides)
-    finalBundleBumps = bundleOverrideResult.bumps
-    overrideWarnings.push(...bundleOverrideResult.warnings)
+    finalModuleBumps = moduleResult.bumps
+    finalBundleBumps = bundleResult.bumps
+    overrideWarnings = [...moduleResult.warnings, ...bundleResult.warnings]
 
     // Apply ontology override if specified
     if (overrides.ontology) {
@@ -431,31 +454,8 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
   }
 
   // Calculate new versions for modules and bundles
-  const moduleVersions = new Map()
-  for (const [moduleId, bump] of finalModuleBumps) {
-    const moduleEntity = entityIndex.modules.get(moduleId)
-    if (moduleEntity && moduleEntity.version) {
-      const newVersion = calculateNewVersion(moduleEntity.version, bump)
-      moduleVersions.set(moduleId, {
-        current: moduleEntity.version,
-        new: newVersion,
-        bump
-      })
-    }
-  }
-
-  const bundleVersions = new Map()
-  for (const [bundleId, bump] of finalBundleBumps) {
-    const bundleEntity = entityIndex.bundles.get(bundleId)
-    if (bundleEntity && bundleEntity.version) {
-      const newVersion = calculateNewVersion(bundleEntity.version, bump)
-      bundleVersions.set(bundleId, {
-        current: bundleEntity.version,
-        new: newVersion,
-        bump
-      })
-    }
-  }
+  const moduleVersions = calculateEntityVersions(finalModuleBumps, entityIndex.modules)
+  const bundleVersions = calculateEntityVersions(finalBundleBumps, entityIndex.bundles)
 
   return {
     changes,
