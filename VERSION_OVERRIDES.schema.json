@@ -13,6 +13,10 @@
     {
       "Core": "major",
       "Lab": "minor"
+    },
+    {
+      "Core": "major",
+      "ontology": "minor"
     }
   ]
 }

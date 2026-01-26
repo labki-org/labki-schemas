@@ -54,7 +54,8 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "$BEFORE".."$AFTER" | \
             grep -E '^(properties|categories|templates|subobjects|modules|bundles)/' | \
             grep '\.json$' | \
-            grep -v '/versions/' || true)
+            grep -v '/versions/' | \
+            grep -v '_schema\.json' || true)
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "No entity files changed, skipping artifact generation"

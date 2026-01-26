@@ -620,18 +620,9 @@ function validateVersion(entityIndex) {
   const baseVersion = getBaseVersion()
   analysis.baseVersion = baseVersion || '0.0.0'
 
-  // 4. Compare versions (if base exists)
+  // 4. Check if version is incremented (informational only - CI auto-increments)
   if (baseVersion) {
-    const compareResult = compareVersions(analysis.prVersion, baseVersion)
-    if (!compareResult.valid) {
-      errors.push({
-        file: 'VERSION',
-        type: 'version-not-incremented',
-        message: compareResult.error
-      })
-      return { errors, warnings, analysis }
-    }
-    analysis.isIncremented = true
+    analysis.isIncremented = semver.gt(analysis.prVersion, baseVersion)
   } else {
     // New VERSION file, treat as incremented from 0.0.0
     analysis.isIncremented = true

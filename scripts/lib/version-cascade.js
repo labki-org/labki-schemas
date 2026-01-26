@@ -228,23 +228,28 @@ export function calculateBundleBumps(entityIndex, moduleBumps) {
 }
 
 /**
- * Calculate overall ontology version bump
+ * Calculate ontology version bump from module and bundle bumps
  *
- * Takes the maximum of all entity changes (including orphans).
+ * Takes the maximum bump across all modules and bundles.
  *
- * @param {Array} changes - All entity changes from detectChanges
- * @returns {string} Overall bump type ('major', 'minor', or 'patch')
+ * @param {Map<string, string>} moduleBumps - Module bump types
+ * @param {Map<string, string>} bundleBumps - Bundle bump types
+ * @returns {string|null} Overall bump type, or null if no bumps needed
  *
  * @example
- * calculateOntologyBump(changes) // 'major'
+ * calculateOntologyBump(moduleBumps, bundleBumps) // 'major'
  */
-export function calculateOntologyBump(changes) {
-  if (!changes || changes.length === 0) {
-    return 'patch'
+export function calculateOntologyBump(moduleBumps, bundleBumps) {
+  const allBumps = [
+    ...moduleBumps.values(),
+    ...bundleBumps.values()
+  ]
+
+  if (allBumps.length === 0) {
+    return null
   }
 
-  const bumps = changes.map(c => c.changeType)
-  return maxBumpType(bumps)
+  return maxBumpType(allBumps)
 }
 
 /**
@@ -361,8 +366,12 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
       changes: [],
       moduleBumps: new Map(),
       bundleBumps: new Map(),
-      ontologyBump: 'patch',
-      orphanChanges: []
+      ontologyBump: null,
+      orphanChanges: [],
+      overrides: {},
+      overrideWarnings: [],
+      moduleVersions: new Map(),
+      bundleVersions: new Map()
     }
   }
 
@@ -379,8 +388,8 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
   // Calculate bundle bumps
   const bundleBumps = calculateBundleBumps(entityIndex, moduleBumps)
 
-  // Calculate ontology bump
-  const ontologyBump = calculateOntologyBump(changes)
+  // Calculate ontology bump from module and bundle bumps
+  const ontologyBump = calculateOntologyBump(moduleBumps, bundleBumps)
 
   // Identify orphan changes (entities not in any module)
   const orphanChanges = changes.filter(change => {
@@ -394,6 +403,7 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
   let overrideWarnings = []
   let finalModuleBumps = moduleBumps
   let finalBundleBumps = bundleBumps
+  let finalOntologyBump = ontologyBump
 
   if (options.applyOverrides) {
     overrides = loadOverrides(options.rootDir)
@@ -407,6 +417,17 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
     const bundleOverrideResult = applyOverrides(bundleBumps, overrides)
     finalBundleBumps = bundleOverrideResult.bumps
     overrideWarnings.push(...bundleOverrideResult.warnings)
+
+    // Apply ontology override if specified
+    if (overrides.ontology) {
+      const calculatedPriority = BUMP_PRIORITY[ontologyBump] || 0
+      const overridePriority = BUMP_PRIORITY[overrides.ontology] || 0
+
+      if (overridePriority < calculatedPriority) {
+        overrideWarnings.push(`Override downgrades ontology from ${ontologyBump} to ${overrides.ontology}`)
+      }
+      finalOntologyBump = overrides.ontology
+    }
   }
 
   // Calculate new versions for modules and bundles
@@ -440,7 +461,7 @@ export function calculateVersionCascade(entityIndex, baseBranch = 'origin/main',
     changes,
     moduleBumps: finalModuleBumps,
     bundleBumps: finalBundleBumps,
-    ontologyBump,
+    ontologyBump: finalOntologyBump,
     orphanChanges,
     overrides,
     overrideWarnings,

@@ -100,8 +100,8 @@ async function main() {
       }
     }
 
-    // Update ontology VERSION if there are any changes
-    if (result.ontologyBump && (result.moduleVersions.size > 0 || result.bundleVersions.size > 0 || result.orphanChanges.length > 0)) {
+    // Update ontology VERSION only if there's an actual bump needed
+    if (result.ontologyBump) {
       ontologyVersion = updateOntologyVersion(result.ontologyBump)
     }
 
