@@ -22,7 +22,9 @@ const ENTITY_TYPES_SET = new Set(ENTITY_TYPES)
  * //   subobjects: Map<id, entity>,
  * //   templates: Map<id, entity>,
  * //   modules: Map<id, entity>,
- * //   bundles: Map<id, entity>
+ * //   bundles: Map<id, entity>,
+ * //   dashboards: Map<id, entity>,
+ * //   resources: Map<id, entity>
  * // }
  */
 export async function buildEntityIndex(rootDir = process.cwd()) {
@@ -33,7 +35,9 @@ export async function buildEntityIndex(rootDir = process.cwd()) {
     subobjects: new Map(),
     templates: new Map(),
     modules: new Map(),
-    bundles: new Map()
+    bundles: new Map(),
+    dashboards: new Map(),
+    resources: new Map()
   }
 
   // Discover all JSON files
