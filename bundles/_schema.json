@@ -35,6 +35,15 @@
       },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "dashboards": {
+      "type": "array",
+      "description": "List of Dashboard IDs included in this Bundle",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][a-z]*(_[a-z]+)*$"
+      },
+      "uniqueItems": true
     }
   }
 }

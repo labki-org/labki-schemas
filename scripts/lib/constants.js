@@ -1,12 +1,12 @@
 /**
  * Entity types array (used across multiple files)
  */
-export const ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates', 'modules', 'bundles']
+export const ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates', 'modules', 'bundles', 'dashboards', 'resources']
 
 /**
  * Entity types for module contents (excludes modules/bundles)
  */
-export const MODULE_ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates']
+export const MODULE_ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates', 'dashboards', 'resources']
 
 /**
  * Glob ignore patterns for file discovery

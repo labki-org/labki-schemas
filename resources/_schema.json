@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://labki.org/schemas/resource.schema.json",
+  "title": "Resource",
+  "description": "Pre-written category content (like pre-filled forms)",
+  "type": "object",
+  "required": ["id", "label", "description", "category"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier matching the file path (without .json). Use / for hierarchical paths.",
+      "minLength": 1
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable display name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Explanation of what this Resource provides",
+      "minLength": 1
+    },
+    "category": {
+      "type": "string",
+      "description": "Category ID this resource belongs to",
+      "pattern": "^[A-Z][a-z]*(_[a-z]+)*$"
+    }
+  }
+}
