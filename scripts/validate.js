@@ -283,6 +283,38 @@ function generateBumpTable(title, entityLabel, bumps) {
 }
 
 /**
+ * Generate version analysis table markdown
+ * @param {object} analysis - Version analysis object with prVersion, baseVersion, requiredBump, actualBump
+ * @returns {string} Markdown table for version analysis
+ */
+function generateVersionTable(analysis) {
+  let md = '| Field | Value |\n'
+  md += '|-------|-------|\n'
+  md += `| PR Version | ${analysis.prVersion} |\n`
+  md += `| Base Version | ${analysis.baseVersion} |\n`
+  md += `| Required Bump | ${analysis.requiredBump} |\n`
+  md += `| Actual Bump | ${analysis.actualBump} |\n`
+  return md
+}
+
+/**
+ * Generate breaking changes list markdown
+ * @param {Array<string>} breakingChanges - Array of breaking change reasons
+ * @returns {string} Markdown list of breaking changes (empty string if none)
+ */
+function generateBreakingChangesList(breakingChanges) {
+  if (breakingChanges.length === 0) {
+    return ''
+  }
+
+  let md = '\n**Breaking Changes Detected:**\n'
+  for (const reason of breakingChanges) {
+    md += `- ${reason}\n`
+  }
+  return md
+}
+
+/**
  * Generate version cascade section markdown
  * @param {object} cascade - Cascade analysis from versionAnalysis.cascade
  * @returns {string} Markdown for cascade section (without wrapper)
@@ -371,19 +403,8 @@ function generatePRComment(schemaErrors, refErrors, cycleErrors, allWarnings, to
     const versionStatus = (versionAnalysis.isValid && versionAnalysis.isIncremented) ? '\u2705' : '\u26A0\uFE0F'
     md += '<details>\n'
     md += `<summary>Version Analysis ${versionStatus}</summary>\n\n`
-    md += '| Field | Value |\n'
-    md += '|-------|-------|\n'
-    md += `| PR Version | ${versionAnalysis.prVersion} |\n`
-    md += `| Base Version | ${versionAnalysis.baseVersion} |\n`
-    md += `| Required Bump | ${versionAnalysis.requiredBump} |\n`
-    md += `| Actual Bump | ${versionAnalysis.actualBump} |\n`
-
-    if (versionAnalysis.breakingChanges.length > 0) {
-      md += '\n**Breaking Changes Detected:**\n'
-      for (const reason of versionAnalysis.breakingChanges) {
-        md += `- ${reason}\n`
-      }
-    }
+    md += generateVersionTable(versionAnalysis)
+    md += generateBreakingChangesList(versionAnalysis.breakingChanges)
     md += '\n</details>\n\n'
   }
 
@@ -501,20 +522,12 @@ function generateMarkdownSummary(allErrors, allWarnings, totalFiles, versionAnal
   // Version analysis section (if version was checked)
   if (versionAnalysis && versionAnalysis.prVersion) {
     markdown += '### Version Analysis\n\n'
-    markdown += '| Field | Value |\n'
-    markdown += '|-------|-------|\n'
-    markdown += `| PR Version | ${versionAnalysis.prVersion} |\n`
-    markdown += `| Base Version | ${versionAnalysis.baseVersion} |\n`
-    markdown += `| Required Bump | ${versionAnalysis.requiredBump} |\n`
-    markdown += `| Actual Bump | ${versionAnalysis.actualBump} |\n`
+    markdown += generateVersionTable(versionAnalysis)
     markdown += '\n'
 
-    if (versionAnalysis.breakingChanges.length > 0) {
-      markdown += '**Breaking Changes Detected:**\n'
-      for (const reason of versionAnalysis.breakingChanges) {
-        markdown += `- ${reason}\n`
-      }
-      markdown += '\n'
+    const breakingChangesMd = generateBreakingChangesList(versionAnalysis.breakingChanges)
+    if (breakingChangesMd) {
+      markdown += breakingChangesMd.trimStart() + '\n'
     }
   }
 

@@ -4,6 +4,11 @@
 export const ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates', 'modules', 'bundles', 'dashboards', 'resources']
 
 /**
+ * Entity types as a Set for efficient lookup
+ */
+export const ENTITY_TYPES_SET = new Set(ENTITY_TYPES)
+
+/**
  * Entity types for module contents (excludes modules/bundles)
  */
 export const MODULE_ENTITY_TYPES = ['categories', 'properties', 'subobjects', 'templates', 'dashboards', 'resources']

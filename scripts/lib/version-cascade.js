@@ -1,8 +1,8 @@
-import { DepGraph } from 'dependency-graph'
 import semver from 'semver'
 import fs from 'node:fs'
 import path from 'node:path'
 import { detectChanges } from './change-detector.js'
+import { buildEntityGraph } from './cycle-detector.js'
 import { MODULE_ENTITY_TYPES, BUMP_PRIORITY } from './constants.js'
 import { parseEntityPath } from './path-utils.js'
 
@@ -113,25 +113,10 @@ export function calculateModuleBumps(entityIndex, changes) {
  * @returns {DepGraph} Dependency graph with modules as nodes
  */
 export function buildModuleDependencyGraph(entityIndex) {
-  const graph = new DepGraph()
-
-  // Add all modules as nodes first
-  for (const [moduleId] of entityIndex.modules) {
-    graph.addNode(moduleId)
-  }
-
-  // Add dependency edges
-  for (const [moduleId, moduleEntity] of entityIndex.modules) {
-    const deps = moduleEntity.dependencies || []
-    for (const depId of deps) {
-      // Only add edge if dependency module exists
-      if (entityIndex.modules.has(depId)) {
-        graph.addDependency(moduleId, depId)
-      }
-    }
-  }
-
-  return graph
+  return buildEntityGraph(
+    entityIndex.modules,
+    entity => entity.dependencies || []
+  )
 }
 
 /**

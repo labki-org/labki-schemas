@@ -2,12 +2,7 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { detailedDiff } from 'deep-object-diff'
-import { ENTITY_TYPES, BUMP_PRIORITY } from './constants.js'
-
-/**
- * Entity directories as a Set for efficient lookup
- */
-const ENTITY_DIRECTORIES = new Set(ENTITY_TYPES)
+import { ENTITY_TYPES_SET, BUMP_PRIORITY } from './constants.js'
 
 /**
  * Get list of changed files between base branch and HEAD
@@ -34,7 +29,7 @@ export function getChangedFiles(baseBranch = 'origin/main') {
         const firstSegment = filePath.split('/')[0]
         const fileName = filePath.split('/').pop()
         // Include only entity JSON files (not _schema.json)
-        return ENTITY_DIRECTORIES.has(firstSegment) &&
+        return ENTITY_TYPES_SET.has(firstSegment) &&
                filePath.endsWith('.json') &&
                fileName !== '_schema.json'
       })

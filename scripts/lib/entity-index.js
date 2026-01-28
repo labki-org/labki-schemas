@@ -1,12 +1,7 @@
 import fg from 'fast-glob'
 import fs from 'node:fs'
 import path from 'node:path'
-import { ENTITY_TYPES, GLOB_IGNORE_PATTERNS } from './constants.js'
-
-/**
- * Known entity types as a Set for efficient lookup
- */
-const ENTITY_TYPES_SET = new Set(ENTITY_TYPES)
+import { ENTITY_TYPES_SET, GLOB_IGNORE_PATTERNS } from './constants.js'
 
 /**
  * Build an index of all entities in the project
