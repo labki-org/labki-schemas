@@ -26,10 +26,13 @@ export const REFERENCE_FIELDS = {
     properties: 'properties',
     subobjects: 'subobjects',
     templates: 'templates',
-    dependencies: 'modules'
+    dependencies: 'modules',
+    dashboards: 'dashboards',
+    resources: 'resources'
   },
   bundles: {
-    modules: 'modules'
+    modules: 'modules',
+    dashboards: 'dashboards'
   }
 }
 
